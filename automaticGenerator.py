@@ -15,9 +15,9 @@ import random
 
 
 
-
+##################################### Функции
 # Функции, отвечаюшие за считывание таблиц и формирование списков с перечисленными названиями, столбцами и рангами
-def getInfoAboutTables():
+def getInfoAboutTables(): # Получение информации о таблицах
     cursor.execute("show tables from databasetest")
     res = cursor.fetchall()
     listTables = []
@@ -31,7 +31,7 @@ def getInfoAboutTables():
     
     return listTables
 
-def findRang():
+def findRang(): # Получение информации о рангах и условиях
     cursor.execute('select * from rang_table')
     rangList = cursor.fetchall()
     return rangList
@@ -42,18 +42,19 @@ def findRang():
 
 #Функции, отвечающие за анализ и генерацию данных
 
+# Генератор данных. Передается массив с названием столбца и типом, а так же количество генерируемых строк
 def generatorStr(columns, numbOfEl): # двумерный массив: название столбца, тип
     arrDictGenerator = []
     strNew = []
     for j in range(0, numbOfEl):
         dictGenerator = {}
-        marqModel = ['', '']
+        marqModel = ['', ''] #дополнительный массив для марки машины и модели
         for i in range(1, len(columns)):
-            if columns[i][0] == 'sex':
+            if columns[i][0] == 'sex': 
                 if 'sex' not in dictGenerator:
                     data = generatorGender()
                     dictGenerator[i] = data
-            if columns[i][0] == 'last_name':
+            if columns[i][0] == 'last_name': 
                 if 'sex' in dictGenerator:
                     gender = dictGenerator.get('sex')
                 else:
@@ -167,8 +168,8 @@ def generatorStr(columns, numbOfEl): # двумерный массив: назв
 
 #def updateStr
 
-
-def generatorEngine():
+#Генераторы, выделенные в отдельные функции
+def generatorEngine(): # 
     engine = ['diesel', 'petrol']
     return random.choice(engine)
 
@@ -187,7 +188,6 @@ def generatorVIN():
     for i in range(0, 17):
         vin += random.choice(arrSymb)
     return vin
-    
 
 def generatorDate():
     d = Datetime()
@@ -196,6 +196,7 @@ def generatorDate():
     formatDate = str(date.year) + '-' + str(date.month) + '-' + str(date.day)
     return formatDate
 
+#не используется
 def generatorPerson(): #содержит массив из имени, фамилии и пола
     person = Person('ru')
     sex_list = ['f', 'm']
@@ -210,7 +211,7 @@ def generatorPerson(): #содержит массив из имени, фами�
     last_name = full[1]
     personArr = [first_name, last_name, sex]
     return personArr
-
+#
 def generatorGender():
     person = Person('ru')
     gend = person.gender()
@@ -225,7 +226,6 @@ def generatorFirstName(gend):
         name = person.first_name(gender = Gender.MALE)
     else:
         name = person.first_name(gender = Gender.FEMALE)
-
     return name
 
 def generatorLastName(gend):
@@ -234,16 +234,13 @@ def generatorLastName(gend):
         name = person.last_name(gender = Gender.MALE)
     else:
         name = person.last_name(gender = Gender.FEMALE)
-
     return name
-
-
 
 
 
 # Функции, отвечающие за формирование запроса sql и отправку данных
 
-def formSQL(dictItems, table_name, database_name):
+def formSQL(dictItems, table_name, database_name): #формирование запроса на вставку данных 
     
     maskSQL = "INSERT INTO " + database_name + "." + table_name + "("
     keyDict = dictItems.keys()
@@ -263,8 +260,7 @@ def formSQL(dictItems, table_name, database_name):
 
 
 
-
-
+# Проходка по всем таблицам, алгоритм распределения по рангам
 def keyFunc(item):
     return item[2]
 
@@ -273,51 +269,52 @@ def goToTable(rangList, listTables, numb): #список с рангами, сп
     #print(rangList)
     colAll = {}
     
-    for k in listTables:
+    for k in listTables: # создание списка (название столбца - тип столбца)
         colTable = []
         for b in k[1]:
             colTable.append([b[0], b[1]])          
         colAll[k[0]] = colTable
     #print(colAll)
     rezStrArr = []
-    for i in rangList:
+    for i in rangList: #проход по списку рангов (состоит из id, table_name, rang, description)
         tablecolumns = []
         table_name = i[1]
         
         rezStr = []
-        table_columns = colAll[table_name]
+        table_columns = colAll[table_name] ()
         #print(table_columns)
-        rezArrDict = generatorStr(table_columns, numb)
-        if i[2] == 1:
+        if i[2] == 1: # действия для 1-го ранга
             print()
+            rezArrDict = generatorStr(table_columns, numb[0])
             for j in rezArrDict:
                 rezStr.append(formSQL(j, table_name, 'databasetest'))
             rezStrArr.append(rezStr)
             print(rezStr)
-        elif i[2] == 2:
+        elif i[2] == 2: # действия для 2-го ранга
             print()
+            rezArrDict = generatorStr(table_columns, numb[0])
             for j in rezArrDict:
                 rezStr.append(formSQL(j, table_name, 'databasetest'))
             print(rezStr)
             rezStrArr.append(rezStr)
-        elif i[2] == 3:
+        elif i[2] == 3: # действия для 3-го ранга
             print()
             condition = i[3]
             conditionArr = condition.split(", ")
-            print(conditionArr)
+            print(conditionArr) # Вот здесь будет часть с разбором условий, с ней пока есть небольшой затуп
             print()
+            rezArrDict = generatorStr(table_columns, numb[1])
             for j in rezArrDict:
                 rezIntermediant = formSQL(j, table_name, 'databasetest')
-                
                 rezStr.append(rezIntermediant)
             rezStrArr.append(rezStr)
             print(rezStr)
 
    
     return rezStrArr
+###############################################
 
-
-
+###############################################
 ## исполняющая часть, коннект с бд и последовательное выполнение алгоритма
 
 try: 
@@ -332,15 +329,14 @@ finally:
         listTable = getInfoAboutTables()
         rangList = findRang()
         
-        rez = goToTable(rangList, listTable, 10)
+        rez = goToTable(rangList, listTable, [10, 7])
     
-       # cursor.execute(rez)
-       # cursor.commit()
+       # cursor.execute(rez) Второй затуп связан с выполнением запроса sql. При работе выдается ошибка, поэтому эта часть пока вся в комментах и не оформлялась в виде функций.
+       # cursor.commit() 
        # cursor.close()
         conn.close()
-#print(generatorPerson())
 
-
+#################################################
 
 
 
