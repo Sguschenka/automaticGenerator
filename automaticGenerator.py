@@ -1,5 +1,6 @@
 import mimesis
 from mimesis import Person
+from mimesis.decorators import romanized
 from mimesis.enums import Gender
 from mimesis.builtins import RussiaSpecProvider as rsp
 from mimesis import Transport
@@ -11,7 +12,6 @@ import mysql.connector
 from mysql.connector import Error
 import re
 import random
-
 
 
 
@@ -36,7 +36,11 @@ def findRang(): # Получение информации о рангах и у�
     rangList = cursor.fetchall()
     return rangList
 
-
+def getInfoForCopyTable(table_name, database_name):
+    strExecute = 'SHOW CREATE TABLE '+database_name+'.'+table_name
+    cursor.execute(strExecute)
+    res = cursor.fetchall()
+    return res
 
 
 
@@ -44,17 +48,17 @@ def findRang(): # Получение информации о рангах и у�
 
 # Генератор данных. Передается массив с названием столбца и типом, а так же количество генерируемых строк
 def generatorStr(columns, numbOfEl): # двумерный массив: название столбца, тип
-    arrDictGenerator = []
+   arrDictGenerator = []
     strNew = []
     for j in range(0, numbOfEl):
         dictGenerator = {}
-        marqModel = ['', ''] #дополнительный массив для марки машины и модели
+        marqModel = ['', '']
         for i in range(1, len(columns)):
-            if columns[i][0] == 'sex': 
+            if columns[i][0] == 'sex':
                 if 'sex' not in dictGenerator:
                     data = generatorGender()
                     dictGenerator[i] = data
-            if columns[i][0] == 'last_name': 
+            if columns[i][0] == 'last_name':
                 if 'sex' in dictGenerator:
                     gender = dictGenerator.get('sex')
                 else:
@@ -76,7 +80,7 @@ def generatorStr(columns, numbOfEl): # двумерный массив: назв
                 dictGenerator['OGRN'] = data
             
             if columns[i][0] == 'marque' and 'model' not in dictGenerator:
-                dictGenerator['marque'] = 0
+                dictGenerator['marque'] = '0'
             elif columns[i][0] == 'marque' and 'model' in dictGenerator and marqModel == ['', '']:
                 tr = Transport()
                 carStr = tr.car()
@@ -96,7 +100,7 @@ def generatorStr(columns, numbOfEl): # двумерный массив: назв
                 dictGenerator['marque'] = marqModel[0]
                                 
             if columns[i][0] == 'model' and 'marque' not in dictGenerator:
-                dictGenerator['model'] = 0
+                dictGenerator['model'] = '0'
             elif columns[i][0] == 'model' and 'marque' in dictGenerator and marqModel == ['','']:
                 tr = Transport()
                 carStr = tr.car()
@@ -112,7 +116,11 @@ def generatorStr(columns, numbOfEl): # двумерный массив: назв
                 else:
                     marqModel[1] = carArr[1]
                 dictGenerator['model'] = marqModel[1]
+                if dictGenerator['marque'] == '0':
+                    dictGenerator['marque'] = marqModel[0]
             elif columns[i][0] == 'model' and 'marque' in dictGenerator and marqModel != ['','']:
+                if dictGenerator['marque'] == '0':
+                    dictGenerator['marque'] = marqModel[0]
                 dictGenerator['model'] = marqModel[1]
                 
             if columns[i][0] == 'name':
@@ -166,8 +174,6 @@ def generatorStr(columns, numbOfEl): # двумерный массив: назв
         #print(dictGenerator)        
     return arrDictGenerator
 
-#def updateStr
-
 #Генераторы, выделенные в отдельные функции
 def generatorEngine(): # 
     engine = ['diesel', 'petrol']
@@ -220,22 +226,29 @@ def generatorGender():
     else:
         return 'F'
 
+@romanized('ru')
+def russian_name(name):
+    return name
+
 def generatorFirstName(gend):
     person = Person('ru')
     if gend == 'M':
         name = person.first_name(gender = Gender.MALE)
+           
     else:
         name = person.first_name(gender = Gender.FEMALE)
-    return name
+        
+    return russian_name(name)
 
 def generatorLastName(gend):
     person = Person('ru')
     if gend == 'M':
         name = person.last_name(gender = Gender.MALE)
+    
     else:
         name = person.last_name(gender = Gender.FEMALE)
-    return name
 
+    return russian_name(name)
 
 
 # Функции, отвечающие за формирование запроса sql и отправку данных
@@ -257,6 +270,9 @@ def formSQL(dictItems, table_name, database_name): #формирование з�
     maskSQL += ');'
     return maskSQL
 
+def formDropTableSQL(table_name, database_name):
+    maskSQL = 'DROP TABLE ' + database_name + '.' + table_name
+    return maskSQL
 
 
 
@@ -269,43 +285,45 @@ def goToTable(rangList, listTables, numb): #список с рангами, сп
     #print(rangList)
     colAll = {}
     
-    for k in listTables: # создание списка (название столбца - тип столбца)
+    for k in listTables:
         colTable = []
         for b in k[1]:
             colTable.append([b[0], b[1]])          
         colAll[k[0]] = colTable
     #print(colAll)
     rezStrArr = []
-    for i in rangList: #проход по списку рангов (состоит из id, table_name, rang, description)
+    for i in rangList:
         tablecolumns = []
         table_name = i[1]
         
         rezStr = []
-        table_columns = colAll[table_name] ()
+        table_columns = colAll[table_name]
         #print(table_columns)
-        if i[2] == 1: # действия для 1-го ранга
-            print()
+        
+        if i[2] == 1:
             rezArrDict = generatorStr(table_columns, numb[0])
+            print()
             for j in rezArrDict:
-                rezStr.append(formSQL(j, table_name, 'databasetest'))
+                rezStr.append(formSQL(j, table_name, database_name))
             rezStrArr.append(rezStr)
             print(rezStr)
-        elif i[2] == 2: # действия для 2-го ранга
-            print()
+        elif i[2] == 2:
             rezArrDict = generatorStr(table_columns, numb[0])
+            print()
             for j in rezArrDict:
-                rezStr.append(formSQL(j, table_name, 'databasetest'))
+                rezStr.append(formSQL(j, table_name, database_name))
             print(rezStr)
             rezStrArr.append(rezStr)
-        elif i[2] == 3: # действия для 3-го ранга
+        elif i[2] == 3:
+            rezArrDict = generatorStr(table_columns, numb[1])
             print()
             condition = i[3]
             conditionArr = condition.split(", ")
-            print(conditionArr) # Вот здесь будет часть с разбором условий, с ней пока есть небольшой затуп
+            print(conditionArr)
             print()
-            rezArrDict = generatorStr(table_columns, numb[1])
             for j in rezArrDict:
-                rezIntermediant = formSQL(j, table_name, 'databasetest')
+                rezIntermediant = formSQL(j, table_name, database_name)
+                
                 rezStr.append(rezIntermediant)
             rezStrArr.append(rezStr)
             print(rezStr)
@@ -317,8 +335,12 @@ def goToTable(rangList, listTables, numb): #список с рангами, сп
 ###############################################
 ## исполняющая часть, коннект с бд и последовательное выполнение алгоритма
 
+database_from = 'databasetest'
+database_in = 'databasetesttopython'
+
+
 try: 
-    conn = mysql.connector.connect(user='root', password='12345', host='localhost', database='databasetest')
+    conn = mysql.connector.connect(user='root', password='12345', host='localhost', database=database_from)
     
 except Error as e:
     print('Error while connecting to MySql', e)
@@ -326,15 +348,43 @@ finally:
     if (conn.is_connected()):
         strArrGlobal = []
         cursor = conn.cursor()
-        listTable = getInfoAboutTables()
+        listTable = getInfoAboutTables(database_from)
         rangList = findRang()
         
-        rez = goToTable(rangList, listTable, [10, 7])
+
+        ddlSQL = []
+        for i in listTable:
+            ddlSQL.append(getInfoForCopyTable(i[0], 'databasetest'))
+        print(ddlSQL)
+        conn.close()    
+        try:
+            conn = mysql.connector.connect(user='root', password='12345', host='localhost', database=database_in)
     
-       # cursor.execute(rez) Второй затуп связан с выполнением запроса sql. При работе выдается ошибка, поэтому эта часть пока вся в комментах и не оформлялась в виде функций.
-       # cursor.commit() 
-       # cursor.close()
-        conn.close()
+        except Error as e:
+            print('Error while connecting to MySql', e)
+        finally:
+            cursor = conn.cursor()
+            listTableNew = getInfoAboutTables(database_in)
+            if len(listTableNew) != 0:
+                for i in listTableNew:
+                    strEx = formDropTableSQL(i[0], database_in)
+                    cursor.execute(strEx)
+                cursor.execute("COMMIT")
+            
+            for i in ddlSQL:
+                for j in i:
+                    cursor.execute(j[1])
+            cursor.execute("COMMIT")
+
+            rez = goToTable(rangList, listTable, [10, 5], database_in)
+            print(rez)
+                            
+            for i in rez:
+                for j in i:
+                    cursor.execute(j)
+            cursor.execute("COMMIT")
+            cursor.close()
+            conn.close()
 
 #################################################
 
